@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class soft_dice(nn.Module):
+class soft_dice_loss(nn.Module):
     def __init__(self, smooth=1e-5):
         """
         Args:
@@ -32,7 +32,7 @@ class soft_dice(nn.Module):
          return 1 - dice.mean()
     
 
-class hard_dice(nn.Module):
+class hard_dice_score(nn.Module):
     def __init__(self, smooth=1e-5):
         """
         Args:
@@ -56,7 +56,7 @@ class hard_dice(nn.Module):
          intersection = torch.sum((y_pred_one_hot*y_true), dim=(2, 3)) + self.smooth
          union = y_pred_one_hot.sum(dim=(2, 3)) + y_true.sum(dim=(2, 3)) + self.smooth
          dice = 2*intersection/union
-         return 1 - dice.mean()
+         return dice.mean()
 
 
 

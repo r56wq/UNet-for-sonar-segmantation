@@ -19,7 +19,8 @@ class Images_Dataset_folder(torch.utils.data.Dataset):
         transformM = Input Labels transformation (default: None)
     Output:
         tx = Transformed images
-        lx = Transformed labels"""
+        lx = Transformed labels, note that the labels are converted to masks instead of RGB values
+        and the lables have been converted to one hot encoding"""
 
     def __init__(self, images_dir, labels_dir,transformI = None, transformM = None):
         self.images = sorted(os.listdir(images_dir))
@@ -35,7 +36,7 @@ class Images_Dataset_folder(torch.utils.data.Dataset):
         else:
             self.tx = torchvision.transforms.Compose([
               #  torchvision.transforms.Resize((128,128)),
-                torchvision.transforms.CenterCrop((500, 1000)),
+                torchvision.transforms.CenterCrop((512, 1024)),
                # torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize(mean=[0.0], std=[0.5])
@@ -46,7 +47,7 @@ class Images_Dataset_folder(torch.utils.data.Dataset):
         else:
             self.lx = torchvision.transforms.Compose([
               #  torchvision.transforms.Resize((128,128)),
-                torchvision.transforms.CenterCrop((500, 1000)),
+                torchvision.transforms.CenterCrop((512, 1024)),
                 torchvision.transforms.ToTensor(),
                 #torchvision.transforms.Lambda(lambda x: torch.cat([x, 1 - x], dim=0))
             ])
@@ -72,5 +73,6 @@ class Images_Dataset_folder(torch.utils.data.Dataset):
         torch.manual_seed(seed)
         label = tomasks(self.lx(l1), self.colormap)
 
-        
+        # Convert to one hot encoding
+        label = torch.nn.functional.one_hot(label.long(), num_classes= len(self.colormap)).permute(2, 0, 1).float()
         return img, label
