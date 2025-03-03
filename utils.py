@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import os
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 class soft_dice(nn.Module):
     def __init__(self, smooth=1e-5):

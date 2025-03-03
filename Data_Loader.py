@@ -56,9 +56,10 @@ class Images_Dataset_folder(torch.utils.data.Dataset):
         return len(self.images)
 
     def __getitem__(self, i):
-        i1 = Image.open(self.images_dir + self.images[i])
-        l1 = Image.open(self.labels_dir + self.labels[i])
-
+        i1_path = os.path.join(self.images_dir, self.images[i])
+        l1_path = os.path.join(self.labels_dir, self.labels[i])
+        i1 = Image.open(i1_path)
+        l1 = Image.open(l1_path)
         seed = np.random.randint(0, 2**31 - 1)
 
         # apply this seed to img tranfsorms
