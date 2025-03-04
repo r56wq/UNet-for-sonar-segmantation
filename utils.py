@@ -5,7 +5,7 @@ import os
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-
+import torchvision
 
 class soft_dice_loss(nn.Module):
     def __init__(self, smooth=1e-5):
@@ -226,18 +226,8 @@ def visualize_tensor(T: torch.Tensor, title: str = None):
     plt.axis('off')
     plt.show()
 
-# Example usage:
-if __name__ == "__main__":
-    # Example tensor: grayscale (1, 64, 64)
-    gray_tensor = torch.randn(1, 64, 64)
-    visualize_tensor(gray_tensor, title="Grayscale Image")
 
-    # Example tensor: RGB (3, 64, 64)
-    rgb_tensor = torch.randn(3, 64, 64)
-    visualize_tensor(rgb_tensor, title="RGB Image")
-
-
-def classes_to_colors(classes: torch.Tensor, colormap: list) -> torch.Tensor:
+def classes_to_colors(classes: torch.Tensor) -> torch.Tensor:
     """
     Convert a tensor representing classes into an RGB image using a colormap.
 
@@ -245,46 +235,24 @@ def classes_to_colors(classes: torch.Tensor, colormap: list) -> torch.Tensor:
         classes (torch.Tensor): Tensor representing classes. Can be:
             - Shape (C, H, W): One-hot encoded, where C is the number of classes.
             - Shape (H, W): Class indices (integers from 0 to C-1).
-        colormap (list): List of RGB colors, where each entry is [R, G, B] (values in [0, 255]).
-                         Length must match the number of classes.
 
     Returns:
         torch.Tensor: RGB image tensor of shape (3, H, W) with values in [0, 255].
 
     Raises:
         ValueError: If input shapes or colormap length are incompatible.
-    Example:
-        >>> # Define a colormap: [background, class1, class2]
-        >>> colormap = [[0, 0, 0], [255, 0, 0], [0, 255, 0]]  # Black, Red, Green
-        >>> 
-        >>> # Example 1: Class indices tensor (H, W)
-        >>> classes_idx = torch.tensor([[0, 1, 2], [1, 2, 0], [2, 0, 1]])  # Shape: (3, 3)
-        >>> colored = classes_to_colors(classes_idx, colormap)
-        >>> print(colored.shape, colored.dtype)  # torch.Size([3, 3, 3]) torch.uint8
-        >>> 
-        >>> # Example 2: One-hot encoded tensor (C, H, W)
-        >>> classes_onehot = torch.zeros(3, 3, 3)  # 3 classes, 3x3 image
-        >>> classes_onehot[0, 0, 0] = 1  # Background
-        >>> classes_onehot[1, 0, 1] = 1  # Class 1
-        >>> classes_onehot[2, 0, 2] = 1  # Class 2
-        >>> colored_onehot = classes_to_colors(classes_onehot, colormap)
-        >>> print(colored_onehot.shape, colored_onehot.dtype)  # torch.Size([3, 3, 3]) torch.uint8
-        >>> 
-        >>> # Visualize (assuming visualize_tensor is defined)
-        >>> from visualize_tensor import visualize_tensor
-        >>> visualize_tensor(colored, title="Class Indices to Colors")
-        >>> visualize_tensor(colored_onehot, title="One-Hot to Colors")
     """
+    # Example colormap with tuples
+    colormap = [(0, 0, 0), (255, 32, 64)]  # Black, Reddish
     
-
     # Ensure tensor is on CPU and detached
     if classes.is_cuda:
         classes = classes.cpu()
     classes = classes.detach()
 
     # Validate colormap
-    if not isinstance(colormap, list) or not all(isinstance(c, list) and len(c) == 3 for c in colormap):
-        raise ValueError("colormap must be a list of [R, G, B] lists")
+    if not isinstance(colormap, (list, tuple)) or not all(isinstance(c, (list, tuple)) and len(c) == 3 for c in colormap):
+        raise ValueError("colormap must be a list or tuple of [R, G, B] or (R, G, B) elements")
 
     # Handle input tensor shape
     if len(classes.shape) == 3:  # (C, H, W) - one-hot encoded
@@ -301,7 +269,7 @@ def classes_to_colors(classes: torch.Tensor, colormap: list) -> torch.Tensor:
     if len(colormap) < num_classes:
         raise ValueError(f"colormap must have at least {num_classes} colors, got {len(colormap)}")
 
-    # Convert colormap to tensor
+    # Convert colormap to tensor (handles both lists and tuples)
     colormap_tensor = torch.tensor(colormap, dtype=torch.uint8)  # Shape: (num_colors, 3)
 
     # Map class indices to colors
@@ -312,3 +280,48 @@ def classes_to_colors(classes: torch.Tensor, colormap: list) -> torch.Tensor:
     colored_image = colored_image.permute(2, 0, 1)  # (3, H, W)
 
     return colored_image
+
+
+def show_results(dir, img_name, model):
+    """
+    Display the original image, ground truth mask, and predicted mask side by side.
+    
+    Args:
+        dir (str): Directory containing images and masks.
+        img_name (str): Name of the image file.
+        model (torch.nn.Module): Trained model for prediction.
+    """
+    # Load the image and mask
+    img_path = os.path.join(dir, "JPEGImages", img_name+".jpg")
+    mask_path = os.path.join(dir, "Annotations", img_name+".png")
+    img = Image.open(img_path)
+    mask = Image.open(mask_path)
+
+    # Transform the image and mask
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((512, 1024)),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=[0.0], std=[0.5])
+    ])
+    img_tensor = transform(img).unsqueeze(0)  # Add batch dimension
+    mask_tensor = transform(mask).unsqueeze(0)  # Add batch dimension
+
+    # Predict the mask
+    model.eval()
+    with torch.no_grad():
+        pred_mask = model(img_tensor).argmax(dim=1)  # Predict and get class indices
+        colors = classes_to_colors(pred_mask)  # Convert to RGB image
+    
+    # Visualize the images
+    plt.figure(figsize=(12, 4))
+    plt.subplot(1, 3, 1)
+    plt.imshow(img)
+    plt.axis('off')
+    plt.title("Original Image")
+    plt.subplot(1, 3, 2)
+    plt.imshow(mask)
+    plt.axis('off')
+    plt.title("Ground Truth Mask")
+    plt.subplot(1, 3, 3)
+    visualize_tensor(colors, title="Predicted Mask")
+    plt.show()

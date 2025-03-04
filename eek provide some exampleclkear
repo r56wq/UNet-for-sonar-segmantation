@@ -1,0 +1,41 @@
+[33mcommit d6e09ab5fb8f44d0942b0aa8dc67049819f11f3d[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: r56wq <cdnudjundun@gmail.com>
+Date:   Mon Mar 3 10:59:05 2025 +0800
+
+    rename hard_dice to hard_dice_score, soft_dice to soft_dice_loss
+
+[33mcommit 84137a2916d65af362f6a791d2b6478988cc9b65[m
+Author: r56wq <cdnudjundun@gmail.com>
+Date:   Mon Mar 3 10:44:22 2025 +0800
+
+    fix bug in image reading by using os.path.join instead of + in Data_Loader.py
+
+[33mcommit cf63a33f71db3d870585faf4936ddcf0a69be178[m
+Author: r56wq <cdnudjundun@gmail.com>
+Date:   Mon Mar 3 10:26:22 2025 +0800
+
+    Add train, test, val folders
+
+[33mcommit c99591e9b94feb200cc582ace1ecd2c7071b13d1[m
+Author: r56wq <cdnudjundun@gmail.com>
+Date:   Sun Mar 2 18:16:00 2025 +0800
+
+    add colormap.txt, Data_Loader.py and dataset
+
+[33mcommit 5142fe06c60534e557b0397b12f0edfabfa8187a[m
+Author: r56wq <cdnudjundun@gmail.com>
+Date:   Sun Mar 2 11:52:31 2025 +0800
+
+    Add soft_dice and hard_dice in utils.py
+
+[33mcommit c9f64100750b2ce8af5186715532b24e2fc05871[m
+Author: r56wq <cdnudjundun@gmail.com>
+Date:   Sun Mar 2 08:40:15 2025 +0800
+
+    Add models, utils, part of training
+
+[33mcommit 54838bbe9e2346a82e99e04f685528abf430820b[m
+Author: r56wq <cdnudjundun@gmail.com>
+Date:   Sat Mar 1 13:00:05 2025 +0800
+
+    add UNet model
