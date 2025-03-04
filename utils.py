@@ -29,7 +29,7 @@ class soft_dice_loss(nn.Module):
          intersection = torch.sum((y_pred*y_true), dim=(2, 3)) + self.smooth
          union = y_pred.sum(dim=(2, 3)) + y_true.sum(dim=(2, 3)) + self.smooth
          dice = 2*intersection/union
-         return 1 - dice.mean()
+         return 1 - dice[:, 1:].mean()
     
 
 class hard_dice_score(nn.Module):
@@ -56,7 +56,7 @@ class hard_dice_score(nn.Module):
          intersection = torch.sum((y_pred_one_hot*y_true), dim=(2, 3)) + self.smooth
          union = y_pred_one_hot.sum(dim=(2, 3)) + y_true.sum(dim=(2, 3)) + self.smooth
          dice = 2*intersection/union
-         return dice.mean()
+         return dice[:, 1:].mean()
 
 
 
@@ -186,3 +186,55 @@ def readColormap(path: str) -> list:
             colormap.append((r, g, b))
     
     return colormap
+
+
+import torch
+import matplotlib.pyplot as plt
+import numpy as np
+
+def visualize_tensor(T: torch.Tensor, title: str = None):
+    """
+    Plot a tensor with shape (C, H, W) with matplotlib.
+    
+    Args:
+        T (torch.Tensor): Tensor representing an image with shape (C, H, W).
+        title (str, optional): Title of the plot. Defaults to None.
+    """
+    # Ensure the tensor is on CPU and converted to numpy
+    if T.is_cuda:
+        T = T.cpu()
+    T_np = T.detach().numpy()
+
+    # Check tensor shape
+    if len(T.shape) != 3:
+        raise ValueError(f"Expected tensor of shape (C, H, W), got {T.shape}")
+
+    channels, height, width = T.shape
+
+    # Handle different channel cases
+    if channels == 1:  # Grayscale image
+        img = T_np[0]  # (H, W)
+        plt.imshow(img, cmap='gray')
+    elif channels == 3:  # RGB image
+        img = np.transpose(T_np, (1, 2, 0))  # (H, W, C)
+        plt.imshow(img)
+    else:
+        raise ValueError(f"Unsupported number of channels: {channels}. Expected 1 or 3.")
+
+    # Set title if provided
+    if title is not None:
+        plt.title(title)
+
+    # Remove axis ticks
+    plt.axis('off')
+    plt.show()
+
+# Example usage:
+if __name__ == "__main__":
+    # Example tensor: grayscale (1, 64, 64)
+    gray_tensor = torch.randn(1, 64, 64)
+    visualize_tensor(gray_tensor, title="Grayscale Image")
+
+    # Example tensor: RGB (3, 64, 64)
+    rgb_tensor = torch.randn(3, 64, 64)
+    visualize_tensor(rgb_tensor, title="RGB Image")
