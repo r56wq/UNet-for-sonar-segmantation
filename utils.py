@@ -188,9 +188,6 @@ def readColormap(path: str) -> list:
     return colormap
 
 
-import torch
-import matplotlib.pyplot as plt
-import numpy as np
 
 def visualize_tensor(T: torch.Tensor, title: str = None):
     """
@@ -238,3 +235,80 @@ if __name__ == "__main__":
     # Example tensor: RGB (3, 64, 64)
     rgb_tensor = torch.randn(3, 64, 64)
     visualize_tensor(rgb_tensor, title="RGB Image")
+
+
+def classes_to_colors(classes: torch.Tensor, colormap: list) -> torch.Tensor:
+    """
+    Convert a tensor representing classes into an RGB image using a colormap.
+
+    Args:
+        classes (torch.Tensor): Tensor representing classes. Can be:
+            - Shape (C, H, W): One-hot encoded, where C is the number of classes.
+            - Shape (H, W): Class indices (integers from 0 to C-1).
+        colormap (list): List of RGB colors, where each entry is [R, G, B] (values in [0, 255]).
+                         Length must match the number of classes.
+
+    Returns:
+        torch.Tensor: RGB image tensor of shape (3, H, W) with values in [0, 255].
+
+    Raises:
+        ValueError: If input shapes or colormap length are incompatible.
+    Example:
+        >>> # Define a colormap: [background, class1, class2]
+        >>> colormap = [[0, 0, 0], [255, 0, 0], [0, 255, 0]]  # Black, Red, Green
+        >>> 
+        >>> # Example 1: Class indices tensor (H, W)
+        >>> classes_idx = torch.tensor([[0, 1, 2], [1, 2, 0], [2, 0, 1]])  # Shape: (3, 3)
+        >>> colored = classes_to_colors(classes_idx, colormap)
+        >>> print(colored.shape, colored.dtype)  # torch.Size([3, 3, 3]) torch.uint8
+        >>> 
+        >>> # Example 2: One-hot encoded tensor (C, H, W)
+        >>> classes_onehot = torch.zeros(3, 3, 3)  # 3 classes, 3x3 image
+        >>> classes_onehot[0, 0, 0] = 1  # Background
+        >>> classes_onehot[1, 0, 1] = 1  # Class 1
+        >>> classes_onehot[2, 0, 2] = 1  # Class 2
+        >>> colored_onehot = classes_to_colors(classes_onehot, colormap)
+        >>> print(colored_onehot.shape, colored_onehot.dtype)  # torch.Size([3, 3, 3]) torch.uint8
+        >>> 
+        >>> # Visualize (assuming visualize_tensor is defined)
+        >>> from visualize_tensor import visualize_tensor
+        >>> visualize_tensor(colored, title="Class Indices to Colors")
+        >>> visualize_tensor(colored_onehot, title="One-Hot to Colors")
+    """
+    
+
+    # Ensure tensor is on CPU and detached
+    if classes.is_cuda:
+        classes = classes.cpu()
+    classes = classes.detach()
+
+    # Validate colormap
+    if not isinstance(colormap, list) or not all(isinstance(c, list) and len(c) == 3 for c in colormap):
+        raise ValueError("colormap must be a list of [R, G, B] lists")
+
+    # Handle input tensor shape
+    if len(classes.shape) == 3:  # (C, H, W) - one-hot encoded
+        num_classes, height, width = classes.shape
+        class_indices = torch.argmax(classes, dim=0)  # (H, W)
+    elif len(classes.shape) == 2:  # (H, W) - class indices
+        height, width = classes.shape
+        class_indices = classes
+        num_classes = int(class_indices.max().item()) + 1  # Infer number of classes
+    else:
+        raise ValueError(f"Expected classes tensor of shape (C, H, W) or (H, W), got {classes.shape}")
+
+    # Validate colormap length
+    if len(colormap) < num_classes:
+        raise ValueError(f"colormap must have at least {num_classes} colors, got {len(colormap)}")
+
+    # Convert colormap to tensor
+    colormap_tensor = torch.tensor(colormap, dtype=torch.uint8)  # Shape: (num_colors, 3)
+
+    # Map class indices to colors
+    # Shape of class_indices is (H, W), output should be (H, W, 3)
+    colored_image = colormap_tensor[class_indices]  # (H, W, 3)
+
+    # Transpose to (3, H, W) for consistency with image conventions
+    colored_image = colored_image.permute(2, 0, 1)  # (3, H, W)
+
+    return colored_image
